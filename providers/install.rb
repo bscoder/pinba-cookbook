@@ -79,11 +79,17 @@ def configure
     else
         Chef::Log.info("Pinba plugin install success")
     end
+    
+    if node['mysql']['server_root_password'] == "" then
+      mysql_password_param = ""
+    else
+      mysql_password_param = "-p#{node['mysql']['server_root_password']}"
+    end
 
     unless database_confugure?
         execute "install pinba default tables" do
           cwd "#{new_resource.tmp_dir}/pinba-source"
-          command "mysql -u root -p#{node['mysql']['server_root_password']} -D pinba < default_tables.sql"
+          command "mysql -u root #{mysql_password_param} -D pinba < default_tables.sql"
         end
     end
 end
