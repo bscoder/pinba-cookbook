@@ -23,6 +23,14 @@ def get_mysql_folder
     return mysql_version.stdout
 end
 
+def mysql_password_param(mysql_password)
+    if mysql_password == "" then
+      mysql_password_param = ""
+    else
+      mysql_password_param = "-p#{mysql_password}"
+    end
+end
+
 def download_pinba
 
     Chef::Log.info("Downloading pinba source")
@@ -49,7 +57,7 @@ def download_mysql
 
     execute "rename mysql source" do
       cwd new_resource.tmp_dir
-      command "find -name '*mysql-5*' -type d -print0 | xargs -0 -I {} mv {} #{new_resource.tmp_dir}/mysql-source"
+      command "find -name '*mysql-5*' -type d -print0 | xargs -0 -I {} ln -sf {} #{new_resource.tmp_dir}/mysql-source"
     end
 
 end
@@ -80,22 +88,16 @@ def configure
         Chef::Log.info("Pinba plugin install success")
     end
     
-    if node['mysql']['server_root_password'] == "" then
-      mysql_password_param = ""
-    else
-      mysql_password_param = "-p#{node['mysql']['server_root_password']}"
-    end
-
     unless database_confugure?
         execute "install pinba default tables" do
           cwd "#{new_resource.tmp_dir}/pinba-source"
-          command "mysql -u root #{mysql_password_param} -D pinba < default_tables.sql"
+          command "mysql -u root #{mysql_password_param(node['mysql']['server_root_password'])} -D pinba < default_tables.sql"
         end
     end
 end
 
 def install_plugin?
-    install = Mixlib::ShellOut.new("mysql -u root -p#{node['mysql']['server_root_password']} -e \"INSTALL PLUGIN pinba SONAME 'libpinba_engine.so';\"")
+    install = Mixlib::ShellOut.new("mysql -u root #{mysql_password_param(node['mysql']['server_root_password'])} -e \"INSTALL PLUGIN pinba SONAME 'libpinba_engine.so';\"")
     install.run_command
     install.exitstatus == 1 ? true : false
 end
@@ -104,10 +106,11 @@ def pinba_exists?
     exists = Mixlib::ShellOut.new("find -name '*libpinba_engine.so*' -type f", :cwd => new_resource.plugin_mysql_path)
     exists.run_command
     exists.exitstatus == 0 ? true : false
+    false
 end
 
 def database_confugure?
-    exists = Mixlib::ShellOut.new("mysql -u root -p#{node['mysql']['server_root_password']} -e \"CREATE DATABASE pinba;\"")
+    exists = Mixlib::ShellOut.new("mysql -u root #{mysql_password_param(node['mysql']['server_root_password'])} -e \"CREATE DATABASE pinba;\"")
     exists.run_command
     exists.stdout.include? 'exists'
 end

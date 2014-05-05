@@ -45,7 +45,8 @@ end
 # We can not find if we have apache installed or not easily, so we have this workaround in order not to restart apache when mod is installed
 service = ""
 # enable extension in php
-file "#{node['php']['ext_conf_dir']}/pinba.ini" do
+#file "#{node['php']['ext_conf_dir']}/pinba.ini" do
+file "/etc/php5/mods-available/pinba.ini" do
   content <<-EOH
 extension=pinba.so
 pinba.enabled=#{node['pinba']['client']['enabled']}
@@ -55,6 +56,6 @@ pinba.server=#{node['pinba']['client']['address']}:#{node['pinba']['client']['po
   group "root"
   mode "0644"
   action :create
-    service = "apache2"
-    notifies :reload, resources(:service => "#{service}")
+  #service = "apache2"
+  #notifies :reload, resources(:service => "#{service}")
 end
